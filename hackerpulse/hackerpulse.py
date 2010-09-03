@@ -1,21 +1,62 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, session, g, redirect, url_for
+from flaskext.openid import OpenID
+
 app = Flask(__name__)
+oid = OpenID(app)
+
+@app.before_request
+def lookup_current_user():
+    """ Called before each request, used to set the active user in this session """
+    g.user = None
+    if 'openid' in session:
+        pass #pull the user object from DB
 
 @app.route('/')
 def index():
     return render_template('base.html')
 
 @app.route('/login/')
+@oid.loginhandler
 def login():
-    return "login page goes here"
+    if g.user is not None:
+        #user already logged in, redirect them
+        return redirect(oid.get_next_url())
+    if request.method == 'POST':
+        openid = request.form.get('openid')
+        if openid:
+            #request data from provider
+            return oid.try_login(openid)
+    return render_template('login.html', next = oid.get_next_url(),
+            error=oid.get_error())
 
-def create_or_login():
-    """login handler for OpenID, either let them make an account or redirect"""
-    return "create an account or be redirected"
+@oid.after_login
+def create_or_login(response):
+    """login handler for OpenID, either let them make an account or redirect if they have one"""
+    session['openid'] = response.identity_url  #this is the 'key' for a user
+    user = None #get this from db
+    if user is not None:
+        #user already has an acct, let them login
+        g.user = user
+        return redirect(oid.get_next_url())
+    return redirect(url_for('create_account', next = oid.get_next_url())
 
-@app.route('/create/'):
+@app.route('/create/', methods = ['GET', 'POST']):
 def create_account():
-    return "form to enter feeds, etc"
+    """ Prompt the user to make an acct and set feeds if they have not done so yet """
+    if g.user is not None or 'openid' not in session:
+        return redirect('/')
+    if request.method == 'POST':
+        #get the feed information that is entered, email, name, etc
+        #do validation of required fields
+        #create user in DB
+        return redirect(oid.get_next_url())
+    return render_template('account.html', next = oid.get_next_url())
+
+@app.route('/logout/')
+def logout():
+    session.pop('openid', None)
+    return redirect(oid.get_next_url())
+
 
 @app.route('/<username>/')
 def user_pulse(username):
