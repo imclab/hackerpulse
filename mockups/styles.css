@@ -282,6 +282,11 @@ a {
 	color:#821122;
 	font-weight:bold;
 }
+#top  h3 {
+	padding-bottom:10px;
+	font-size:125%;
+	text-align:center;
+}
 
 #bottom h2 {
 	padding:5px 0;
@@ -299,6 +304,12 @@ a {
 }
 
 #acct_details {
+	width:725px;
+	float:left;
+	text-align:right;
+}
+
+#openid_providers {
 	width:725px;
 	float:left;
 	text-align:right;
